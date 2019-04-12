@@ -887,6 +887,7 @@ MarkerClusterer.prototype.addToClosestCluster_ = function(marker) {
         cluster.addMarker(marker);
         this.clusters_.push(cluster);
         clusterIndex = this.clusters_.length - 1;
+        cluster.setCid(clusterIndex);
     }
 
     if (marker.isAdded) {
@@ -938,8 +939,14 @@ function Cluster(markerClusterer) {
     this.bounds_ = null;
     this.clusterIcon_ = new ClusterIcon(this, markerClusterer.getStyles(),
         markerClusterer.getGridSize());
+    //cluster id (xiaoyi)
+    this.cid=-1;
 }
 
+Cluster.prototype.setCid = function(cid) {
+    this.cid=cid;
+    this.clusterIcon_.setClassID(cid);
+}
 /**
  * Determins if a marker is already added to the cluster.
  *
@@ -1163,8 +1170,12 @@ function ClusterIcon(cluster, styles, opt_padding) {
     this.div_ = null;
     this.sums_ = null;
     this.visible_ = false;
-
     this.setMap(this.map_);
+    this.cluster_id = -1;
+}
+
+ClusterIcon.prototype.setClassID = function(cid) {
+    this.cluster_id = cid;
 }
 
 /**
@@ -1174,7 +1185,7 @@ function ClusterIcon(cluster, styles, opt_padding) {
  */
 ClusterIcon.prototype.triggerClusterClick = function(event) {
     var markerClusterer = this.cluster_.getMarkerClusterer();
-
+    
     // Trigger the clusterclick event.
     google.maps.event.trigger(markerClusterer, 'clusterclick', this.cluster_, event);
 
@@ -1275,6 +1286,16 @@ function defaultClusterOnAdd(clusterIcon) {
     });
 
     google.maps.event.addDomListener(clusterIcon.div_, 'mouseout', function(event) {
+        clusterIcon.triggerClusterMouseout(event);
+    });
+
+    ///// new event for mobile: touchstart triggers mouseover (xiaoyi)
+    google.maps.event.addDomListener(clusterIcon.div_, 'touchstart', function(event) {
+        clusterIcon.triggerClusterMouseover(event);
+    });
+
+    ///// new event for mobile: touchend triggers mouseover  (xiaoyi)
+    google.maps.event.addDomListener(clusterIcon.div_, 'touchend', function(event) {
         clusterIcon.triggerClusterMouseout(event);
     });
 }
@@ -1525,7 +1546,8 @@ ClusterIcon.prototype.addClass = function() {
     if (markerClusterer.cssClass_) {
         this.div_.className = markerClusterer.cssClass_ + ' ' + markerClusterer.cssDefaultClass_ + this.setIndex_;
     } else {
-        this.div_.className = markerClusterer.cssDefaultClass_ + this.setIndex_;
+        // this.div_.className = markerClusterer.cssDefaultClass_ + this.setIndex_;
+        this.div_.className = markerClusterer.cssDefaultClass_ +'_'+this.cluster_id;
     }
 }
 
@@ -1547,6 +1569,7 @@ MarkerClusterer.prototype['getGridSize'] =
 MarkerClusterer.prototype['getExtendedBounds'] =
     MarkerClusterer.prototype.getExtendedBounds;
 MarkerClusterer.prototype['getMap'] = MarkerClusterer.prototype.getMap;
+MarkerClusterer.prototype['getClusters'] = MarkerClusterer.prototype.getClusters;
 MarkerClusterer.prototype['getMarkers'] = MarkerClusterer.prototype.getMarkers;
 MarkerClusterer.prototype['getMaxZoom'] = MarkerClusterer.prototype.getMaxZoom;
 MarkerClusterer.prototype['getMarkersCluster'] = MarkerClusterer.prototype.getMarkersCluster;
